@@ -4,12 +4,11 @@ const movement = {
     left: false, 
     right: false,
     attack: false,
-    switchWeapon: null // Initialize switchWeapon with null
+    switchSlot: null // Initialize switchSlot with null
 };
 
 const cursorPosition = { x: 0, y: 0 };
 
-// Handle keyboard input
 document.addEventListener("keydown", (event) => {
     switch(event.keyCode){
         case 65: // 'A'
@@ -28,18 +27,20 @@ document.addEventListener("keydown", (event) => {
             movement.attack = true;
             break;
         case 49: // '1' key to switch to weapon 1
-            movement.switchWeapon = 1;
+            movement.switchSlot = 0;
             break;
         case 50: // '2' key to switch to weapon 2
-            movement.switchWeapon = 2;
+            movement.switchSlot = 1;
             break;
         case 51: // '3' key to switch to weapon 3
-            movement.switchWeapon = 3;
+            movement.switchSlot = 2;
             break;
         case 52: // '4' key to switch to weapon 4
-        movement.switchWeapon = 4;
+            movement.switchSlot = 3;
             break;
-        // Add more cases for additional weapons
+        case 53: // '5' key to switch to weapon 5
+            movement.switchSlot = 4; // Устанавливаем индекс 4 для пятого слота
+            break;
     }
 });
 
@@ -64,7 +65,8 @@ document.addEventListener("keyup", (event) => {
         case 50: // '2' key
         case 51: // '3' key
         case 52: // '4' key
-            movement.switchWeapon = null; // Reset switchWeapon after key release
+        case 53: // '5' key
+            movement.switchSlot = undefined; // Reset switchSlot after key release
             break;
     }
 });
@@ -75,10 +77,13 @@ document.addEventListener("mousemove", (event) => {
     cursorPosition.y = event.clientY;
 });
 
-// Handle mouse click for attacking
+// Handle mouse click for attacking and using item
 document.addEventListener("mousedown", (event) => {
     if (event.button === 0) { // Left mouse button
         movement.attack = true;
+    }
+    if (event.button === 2) { // Right mouse button
+        movement.useItem = true;
     }
 });
 
@@ -86,9 +91,12 @@ document.addEventListener("mouseup", (event) => {
     if (event.button === 0) { // Left mouse button
         movement.attack = false;
     }
+    if (event.button === 2) { // Right mouse button
+        movement.useItem = false;
+    }
 });
 
 setInterval(() => {
     socket.emit("movement", { ...movement, cursor: cursorPosition });
-    movement.switchWeapon = null; // Reset after sending to prevent repeated switch commands
+    movement.switchSlot = undefined; // Reset after sending to prevent repeated switch commands
 }, 1000/60);

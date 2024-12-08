@@ -1,18 +1,12 @@
+const items = require('./items/ItemList');
+
 // Define the players object at the top level of the module
 const players = {};
 
-const ATTACK_INTERVAL = 1000; // Attack interval in milliseconds (e.g., 1000 ms = 1 second)
-
-class Weapon {
-    constructor(props) {
-        this.name = props.name || "Sword";
-        this.damage = props.damage || 10; // Default damage
-        this.range = props.range || 100; // Default range
-        this.attackInterval = props.attackInterval || ATTACK_INTERVAL; // Cooldown time between attacks
-        this.is_two_handed = props.is_two_handed || false;
-        this.moveSpeed = props.moveSpeed || 5; // Default movement speed (new attribute)
-    }
-}
+const obstacles = [
+    { x: 100, y: 100, width: 100, height: 100 },
+    { x: 400, y: 300, width: 150, height: 150 }
+];
 
 class Player {
     constructor(props) {
@@ -23,54 +17,90 @@ class Player {
         this.positionY = 300;
         this.hp = 100;
         this.maxHp = 100;
-
         this.is_alive = true;
+        this.is_top = false;
+        this.kills = 0;
+        this.cursor = { x: 300, y: 300 };
 
-        this.cursor = { x: 300, y: 300 }; // Default cursor position
+        this.attacking = false;
+        this.lastAttackTime = 0;
+        this.attackAnimationDuration = 200;
+        this.attackStartTime = 0;
 
-        this.attacking = false; // Track if player is attacking
-        this.weapon = props.weapon || new Weapon({}); // Assign a weapon, default to a basic weapon
-        this.attackRange = this.weapon.range; // Use weapon's range
-        this.attackInterval = this.weapon.attackInterval; // Use weapon's attack interval
-        this.moveSpeed = this.weapon.moveSpeed; // Set initial move speed based on weapon (new)
-        this.lastAttackTime = 0; // Timestamp of the last attack
-        this.attackAnimationDuration = 200; // Duration of the attack animation in milliseconds
-        this.attackStartTime = 0; // Timestamp when the attack animation started
+        this.inventory = Array(5).fill(null); // Inventory with 5 slots
+        this.selectedSlot = 0; // Index of the currently selected inventory slot
+
+        // Выдаём два случайных, но разных оружия в первые два слота
+        const [weapon1, weapon2] = this.getTwoRandomWeapons();
+        this.inventory[0] = weapon1;
+        this.inventory[1] = weapon2;
+
+        // // Fill initial inventory slots with some default items
+        // this.inventory[0] = items.dragonslayer;
+        // this.inventory[1] = items.spear;
+        // this.inventory[2] = items.axe;
+        // this.inventory[3] = items.healingPotion;
     }
 
-    // Check if another player is within the attack cone
+    getTwoRandomWeapons() {
+        const weapons = [items.sword, items.spear, items.axe, items.dragonslayer];
+        const shuffledWeapons = weapons.sort(() => 0.5 - Math.random()); // Перемешиваем список оружия
+        return [shuffledWeapons[0], shuffledWeapons[1]]; // Возвращаем первые два уникальных оружия
+    }
+
     isPlayerInAttackCone(otherPlayer) {
         const dx = otherPlayer.positionX - this.positionX;
         const dy = otherPlayer.positionY - this.positionY;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance > this.attackRange) {
+        if (distance > this.inventory[this.selectedSlot]?.range || this.inventory[this.selectedSlot]?.type !== 'weapon') {
             return false;
         }
 
         const angleToPlayer = Math.atan2(dy, dx);
         const angleToCursor = Math.atan2(this.cursor.y - this.positionY, this.cursor.x - this.positionX);
-    
+
         let angleDiff = Math.abs(angleToCursor - angleToPlayer);
         if (angleDiff > Math.PI) {
             angleDiff = 2 * Math.PI - angleDiff; // Handle the angle wrap-around
         }
-    
+
         return angleDiff < Math.PI / 6; // 30 degrees cone
     }
 
     canAttack() {
         const currentTime = Date.now();
-        return currentTime - this.lastAttackTime >= this.attackInterval;
+        return currentTime - this.lastAttackTime >= (this.inventory[this.selectedSlot]?.attackInterval || 1000);
     }
 
-    attack() {
+    attack(weapon) {
         this.lastAttackTime = Date.now();
         this.attacking = true;
         this.attackStartTime = Date.now();
+
+        // Perform attack logic
+        for (const id in players) {
+            if (id !== this._id) {
+                const otherPlayer = players[id];
+                if (this.isPlayerInAttackCone(otherPlayer)) {
+                    otherPlayer.hp -= weapon.damage;
+                    if (otherPlayer.hp <= 0) {
+                        otherPlayer.is_alive = false;
+                        this.kills++;
+                        this.addHealingPotionToInventory();
+                    }
+                }
+            }
+        }
     }
 
-    // Update the attack animation state
+    addHealingPotionToInventory() {
+        const freeSlot = this.inventory.indexOf(null); // Найти первый свободный слот
+        if (freeSlot !== -1) {
+            this.inventory[freeSlot] = items.healingPotion; // Добавить зелье лечения
+        }
+    }
+
     update() {
         if (this.attacking) {
             const currentTime = Date.now();
@@ -79,20 +109,60 @@ class Player {
             }
         }
     }
+
+    useItem() {
+        const item = this.inventory[this.selectedSlot];
+        if (item) {
+            item.useItem(this);
+        }
+    }
+
+    isCollidingWithObstacles(newX, newY) {
+        for (const obstacle of obstacles) {
+            if (newX < obstacle.x + obstacle.width &&
+                newX + this._playerRadius > obstacle.x &&
+                newY < obstacle.y + obstacle.height &&
+                newY + this._playerRadius > obstacle.y) {
+                return true; // Столкновение найдено
+            }
+        }
+        return false;
+    }
+}
+
+const adjectives = [
+    'Brave', 'Mighty', 'Swift', 'Cunning', 'Fierce', 'Bold', 'Silent', 
+    'Wise', 'Fearless', 'Loyal', 'Noble', 'Vengeful', 'Radiant', 
+    'Shadowy', 'Gallant', 'Wily', 'Valiant', 'Stealthy', 'Tenacious', 
+    'Indomitable', 'Courageous', 'Daring', 'Eternal', 'Furious', 
+    'Invincible', 'Mystic', 'Sly', 'Reckless', 'Strategic', 'Zany'
+];
+
+const nouns = [
+    'Dragon', 'Warrior', 'Knight', 'Assassin', 'Wizard', 'Beast', 
+    'Phoenix', 'Titan', 'Rogue', 'Sentinel', 'Guardian', 'Vampire', 
+    'Wraith', 'Hunter', 'Demon', 'Mage', 'Paladin', 'Barbarian', 
+    'Sorcerer', 'Champion', 'Bard', 'Alchemist', 'Cleric', 
+    'Trickster', 'Shaman', 'Brawler', 'Enchanter', 'Spellbinder', 
+    'Berserker', 'Ninja', 'Monk'
+];
+
+// Функция для генерации случайного имени
+function generateRandomName() {
+    const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+    return `${randomAdjective} ${randomNoun}`;
 }
 
 module.exports.getPlayers = (socket, io) => {
     socket.on("new player", () => {
+        // Генерируем случайное составное имя для игрока
+        const randomName = generateRandomName();
+
+        // Создаём нового игрока с этим именем
         players[socket.id] = new Player({
             id: socket.id,
-            name: Object.keys(players).length,
-            weapon: new Weapon({
-                name: "Sword",
-                damage: 15,
-                range: 100,
-                attackInterval: 1000,
-                moveSpeed: 5 // Default movement speed for Sword
-            })
+            name: randomName // Используем случайное имя
         });
     });
 
@@ -102,57 +172,48 @@ module.exports.getPlayers = (socket, io) => {
             player.cursor = data.cursor || player.cursor;
 
             // Use the weapon's moveSpeed to adjust player movement
-            const moveSpeed = player.weapon.moveSpeed;
+            const moveSpeed = player.inventory[player.selectedSlot]?.moveSpeed || 5;
 
-            if (data.left) {
-                player.positionX -= moveSpeed;
-            }
-            if (data.up) {
-                player.positionY -= moveSpeed;
-            }
-            if (data.right) {
-                player.positionX += moveSpeed;
-            }
-            if (data.down) {
-                player.positionY += moveSpeed;
+            // if (data.left) {
+            //     player.positionX -= moveSpeed;
+            // }
+            // if (data.up) {
+            //     player.positionY -= moveSpeed;
+            // }
+            // if (data.right) {
+            //     player.positionX += moveSpeed;
+            // }
+            // if (data.down) {
+            //     player.positionY += moveSpeed;
+            // }
+
+            let newX = player.positionX;
+            let newY = player.positionY;
+
+            if (data.left) newX -= moveSpeed;
+            if (data.up) newY -= moveSpeed;
+            if (data.right) newX += moveSpeed;
+            if (data.down) newY += moveSpeed;
+
+            // Проверяем столкновение, если нет — обновляем позицию
+            if (!player.isCollidingWithObstacles(newX, newY)) {
+                player.positionX = newX;
+                player.positionY = newY;
             }
 
-            // Handle weapon switching
-            if (data.switchWeapon !== null) {
-                switch (data.switchWeapon) {
-                    case 1:
-                        player.weapon = new Weapon({ name: "Sword", damage: 10, range: 50, attackInterval: 1000, is_two_handed: false, moveSpeed: 3 });
-                        break;
-                    case 2:
-                        player.weapon = new Weapon({ name: "Spear", damage: 12, range: 100, attackInterval: 1500, is_two_handed: true, moveSpeed: 2 });
-                        break;
-                    case 3:
-                        player.weapon = new Weapon({ name: "Axe", damage: 15, range: 75, attackInterval: 2000, is_two_handed: false, moveSpeed: 2.5 });
-                        break;
-                    case 4:
-                        player.weapon = new Weapon({ name: "Dragonslayer", damage: 100, range: 75, attackInterval: 2000, is_two_handed: true, moveSpeed: 1 });
-                        break;
-                    // Add more cases for additional weapons
-                }
-                player.attackRange = player.weapon.range; // Update player attack range
-                player.attackInterval = player.weapon.attackInterval; // Update player attack interval
-                player.moveSpeed = player.weapon.moveSpeed; // Update player movement speed (new)
+            // Handle item use
+            if (data.useItem) {
+                player.useItem(); // Use the item in the selected slot
+            }
+
+            // Handle inventory slot switching
+            if (data.switchSlot !== undefined) {
+                player.selectedSlot = data.switchSlot;
             }
 
             // If the player is attacking, check for collisions
-            if (data.attack && player.canAttack()) {
-                player.attack(); // Update last attack time
-                for (const id in players) {
-                    if (id !== socket.id) {
-                        const otherPlayer = players[id];
-                        if (player.isPlayerInAttackCone(otherPlayer)) {
-                            otherPlayer.hp -= player.weapon.damage; // Use weapon's damage
-                            if (otherPlayer.hp <= 0) {
-                                otherPlayer.is_alive = false;
-                            }
-                        }
-                    }
-                }
+            if (data.attack && player.inventory[player.selectedSlot]?.type === 'weapon') {
+                player.inventory[player.selectedSlot].useItem(player); // Attack with the weapon
             }
 
             // Update the player's animation state

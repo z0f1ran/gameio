@@ -1,4 +1,4 @@
-const drawWeapon = (context, weapon, attackProgress) => {
+const drawItem = (context, weapon, attackProgress) => {
     context.save();
     context.beginPath();
     context.strokeStyle = "black"; // Outline for weapons
@@ -199,8 +199,127 @@ const drawWeapon = (context, weapon, attackProgress) => {
             drawHand(context, 0, 7.5);
         
             context.restore();
-            break;            
+            break;   
 
+        case "Warhammer":
+            context.save();
+            // Угол замаха с вращением против часовой стрелки
+            const hammerSwingAngle = easedProgress * Math.PI * 1.25; // Угол размаха
+
+            // Перемещение молота ближе к телу для большего контроля
+            context.translate(-15, -40); // Смещаем ближе к телу, регулируем X и Y
+
+            // Поворот против часовой стрелки
+            context.rotate(Math.PI / 4 - hammerSwingAngle); // Начинаем с угла 45 градусов
+
+            // Рукоять молота
+            const handleGradient = context.createLinearGradient(-2, 0, 2, 70);
+            handleGradient.addColorStop(0, "saddlebrown");
+            handleGradient.addColorStop(1, "darkgoldenrod");
+            context.fillStyle = handleGradient;
+            context.fillRect(-2, 0, 4, 70); // Уменьшаем длину рукояти, чтобы молот был ближе к телу
+
+            // Голова молота
+            context.fillStyle = "gray";
+            context.beginPath();
+            context.moveTo(-12, -22); // Левый верхний угол (меньшая голова)
+            context.lineTo(12, -22);  // Правый верхний угол
+            context.lineTo(18, 0);    // Правый нижний угол
+            context.lineTo(-18, 0);   // Левый нижний угол
+            context.closePath();
+            context.fill();
+
+            // Анимация удара молота
+            if (attackProgress > 0.75) {
+                context.fillStyle = "red";
+                context.arc(0, 0, 12, 0, Math.PI * 2); // Эффект удара по земле
+                context.fill();
+            }
+
+            // Рисуем руку на рукояти молота, ближе к телу
+            drawHand(context, 0, 65);  // Нижняя рука
+            drawHand(context, 0, 55);  // Верхняя рука
+
+            context.restore();
+            break;
+
+        case "Healing Potion":
+            context.save();
+            
+            // Draw potion bottle
+            context.fillStyle = "green";
+            context.beginPath();
+            context.moveTo(-10, -15);
+            context.lineTo(10, -15);
+            context.lineTo(5, 15);
+            context.lineTo(-5, 15);
+            context.closePath();
+            context.fill();
+
+            // Draw potion cap
+            context.fillStyle = "silver";
+            context.beginPath();
+            context.moveTo(-8, -15);
+            context.lineTo(8, -15);
+            context.lineTo(5, -25);
+            context.lineTo(-5, -25);
+            context.closePath();
+            context.fill();
+
+            // Draw potion label
+            context.fillStyle = "white";
+            context.beginPath();
+            context.moveTo(-3, -10);
+            context.lineTo(3, -10);
+            context.lineTo(3, -5);
+            context.lineTo(-3, -5);
+            context.closePath();
+            context.fill();
+
+            // Draw hand on the potion handle
+            drawHand(context, 0, 5);
+
+            context.restore();
+            break;
+            
+        case "Damaging Potion":
+            context.save();
+            
+            // Draw potion bottle
+            context.fillStyle = "red";
+            context.beginPath();
+            context.moveTo(-10, -15);
+            context.lineTo(10, -15);
+            context.lineTo(5, 15);
+            context.lineTo(-5, 15);
+            context.closePath();
+            context.fill();
+
+            // Draw potion cap
+            context.fillStyle = "silver";
+            context.beginPath();
+            context.moveTo(-8, -15);
+            context.lineTo(8, -15);
+            context.lineTo(5, -25);
+            context.lineTo(-5, -25);
+            context.closePath();
+            context.fill();
+
+            // Draw potion label
+            context.fillStyle = "white";
+            context.beginPath();
+            context.moveTo(-3, -10);
+            context.lineTo(3, -10);
+            context.lineTo(3, -5);
+            context.lineTo(-3, -5);
+            context.closePath();
+            context.fill();
+
+            // Draw hand on the potion handle
+            drawHand(context, 0, 5);
+
+            context.restore();
+            break;
         default:
             context.fillStyle = "gray";
             context.fillRect(-1.5, -7.5, 3, 15); // Half the size of the default weapon
@@ -232,7 +351,9 @@ const drawPlayer = (context, player) => {
     const hpBarOffset = 25; // Half the original offset
     const nameOffset = 35; // Half the original name offset
     const weaponOffset = 60; // Half the original weapon offset
-    const weapon = player.weapon;
+
+    // Ensure weapon is defined and valid
+    const weapon = player.inventory[player.selectedSlot] || { name: 'Hand', is_two_handed: false };
     const angle = Math.atan2(player.cursor.y - playerY, player.cursor.x - playerX);
 
     // Draw the player
@@ -260,7 +381,7 @@ const drawPlayer = (context, player) => {
         attackProgress = Math.min(elapsed / attackDuration, 1); // Normalize to [0, 1]
     }
 
-    // Draw left hand (static)
+    // Draw left hand (static) if not two-handed
     if (!weapon.is_two_handed) {
         context.beginPath();
         context.arc(10, -handOffset + 2.5, handRadius, 0, Math.PI * 2); // Half the positions and radius
@@ -268,22 +389,30 @@ const drawPlayer = (context, player) => {
         context.fill();
         context.closePath();
     }
+
     // Draw weapon in right hand with specific animation
     context.save();
     context.translate(10, handOffset - 2.5); // Half the translation
-    drawWeapon(context, player.weapon, attackProgress);
+    drawItem(context, weapon, attackProgress);
     context.restore();
 
     context.restore();
-    // Рисуем никнейм игрока
+
+    // Draw player's name
     context.beginPath();
     context.fillStyle = "red";
     context.font = "16px sans-serif";
     context.textAlign = "center";
-    context.fillText(`Player ${player._name}`, playerX, playerY - nameOffset);
+    if(player.is_top){
+        context.fillText(`👑${player._name}`, playerX, playerY - nameOffset);
+    }
+    else{
+        context.fillText(`${player._name}`, playerX, playerY - nameOffset);
+    }
+    
     context.closePath();
 
-    // Рисуем полоску здоровья
+    // Draw health bar
     context.beginPath();
     context.fillStyle = "black";
     context.fillRect(playerX - hpBarWidth / 2, playerY - hpBarOffset - hpBarHeight, hpBarWidth, hpBarHeight);
@@ -292,11 +421,11 @@ const drawPlayer = (context, player) => {
     context.fillRect(playerX - hpBarWidth / 2, playerY - hpBarOffset - hpBarHeight, hpWidth, hpBarHeight);
     context.closePath();
 
-    // Рисуем название оружия
+    // Draw weapon name
     context.beginPath();
     context.fillStyle = "blue";
     context.font = "14px sans-serif";
     context.textAlign = "center";
-    context.fillText(player.weapon.name, playerX, playerY - weaponOffset);
+    context.fillText(weapon.name, playerX, playerY - weaponOffset);
     context.closePath();
 };
