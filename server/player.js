@@ -43,7 +43,7 @@ class Player {
     }
 
     getTwoRandomWeapons() {
-        const weapons = [items.sword, items.spear, items.axe, items.dragonslayer];
+        const weapons = [items.sword, items.spear, items.axe, items.dragonslayer, items.warhammer];
         const shuffledWeapons = weapons.sort(() => 0.5 - Math.random()); // Перемешиваем список оружия
         return [shuffledWeapons[0], shuffledWeapons[1]]; // Возвращаем первые два уникальных оружия
     }
@@ -171,21 +171,7 @@ module.exports.getPlayers = (socket, io) => {
         if (player.is_alive) {
             player.cursor = data.cursor || player.cursor;
 
-            // Use the weapon's moveSpeed to adjust player movement
             const moveSpeed = player.inventory[player.selectedSlot]?.moveSpeed || 5;
-
-            // if (data.left) {
-            //     player.positionX -= moveSpeed;
-            // }
-            // if (data.up) {
-            //     player.positionY -= moveSpeed;
-            // }
-            // if (data.right) {
-            //     player.positionX += moveSpeed;
-            // }
-            // if (data.down) {
-            //     player.positionY += moveSpeed;
-            // }
 
             let newX = player.positionX;
             let newY = player.positionY;
@@ -195,8 +181,10 @@ module.exports.getPlayers = (socket, io) => {
             if (data.right) newX += moveSpeed;
             if (data.down) newY += moveSpeed;
 
-            // Проверяем столкновение, если нет — обновляем позицию
-            if (!player.isCollidingWithObstacles(newX, newY)) {
+            // Проверяем столкновение и границы поля
+            if (!player.isCollidingWithObstacles(newX, newY) && 
+                newX >= 0 && newX <= 1520 && // Ограничение по X
+                newY >= 0 && newY <= 800) { // Ограничение по Y
                 player.positionX = newX;
                 player.positionY = newY;
             }

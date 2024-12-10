@@ -5,7 +5,7 @@ const items = {
     sword: new Weapon({
         name: "Sword",
         damage: 10,
-        range: 50,
+        range: 100,
         attackInterval: 1000,
         is_two_handed: false,
         moveSpeed: 3
@@ -13,7 +13,7 @@ const items = {
     spear: new Weapon({
         name: "Spear",
         damage: 12,
-        range: 100,
+        range: 150,
         attackInterval: 1500,
         is_two_handed: true,
         moveSpeed: 2
@@ -21,7 +21,7 @@ const items = {
     axe: new Weapon({
         name: "Axe",
         damage: 15,
-        range: 75,
+        range: 125,
         attackInterval: 2000,
         is_two_handed: false,
         moveSpeed: 2.5
@@ -29,7 +29,7 @@ const items = {
     dragonslayer: new Weapon({
         name: "Dragonslayer",
         damage: 100,
-        range: 75,
+        range: 125,
         attackInterval: 2000,
         is_two_handed: true,
         moveSpeed: 1
@@ -37,7 +37,7 @@ const items = {
     warhammer: new Weapon({
         name: "Warhammer",
         damage: 25,
-        range: 60,
+        range: 120,
         attackInterval: 2500,
         is_two_handed: true,
         moveSpeed: 1.5
